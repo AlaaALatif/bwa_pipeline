@@ -1,0 +1,15 @@
+{
+  "out_dir": "/valhalla/ucsd/ucsd_experiment/bwa_2",
+  "bed_file": "/home/al/data/test_inputs/primers/primers_v3.bed",
+  "primer_pairs": "/home/al/data/test_inputs/primers/pair_info_v3.tsv",
+  "gff3_file": "/home/gk/code/hCoV19/db/gff/NC_045512.2.gff3",
+  "ref_fasta": "/home/gk/code/hCoV19/db/NC045512.fasta",
+  "library_delimiter": "_",
+  "samples_path": "/valhalla/ucsd/ucsd_experiment/random_samples_2021-01-23.tsv",
+  "illumina": {
+    "reference": "/home/gk/code/hCoV19/db/NC045512_bwa"
+  },
+  "ont": {
+    "reference": "/home/gk/code/hCoV19/db/NC045512"
+  }
+}
