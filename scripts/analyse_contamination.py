@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from contaminant_utils import *
+import contaminant_utils as cu
 from path import Path
 
 
@@ -13,26 +13,31 @@ if __name__ == "__main__":
     # print(input_pths)
     num_samples = len(input_pths)
     # grab data from each sample
-    ans = load_all_data(input_pths)
+    ans = cu.load_all_data(input_pths)
     # generate paired reads
     ans['paired_read'] = ans.apply(lambda x: x['forward_barcode'] + '-' + x['reverse_barcode'], axis=1)
     # compute log of read counts 
     ans['log_count'] = ans['paired_read_count'].apply(lambda x: np.log(x+1))
-    # generate heatmap matrix of (logged: optional) read counts per sample per paired read
-    hmap, data, x, y = get_heatmap_data(ans)
-    general_hmap = generate_heatmap(data, x, y)
-    # generate heatmap matrix of only samples suspected of contamination
-    cont_data, cont_x, cont_y = get_contaminated_data(data, hmap)
-    cont_hmap = generate_heatmap(cont_data, cont_x, cont_y)
-    # table of barcode read counts for contaminated samples only
-    cont_table = generate_table(ans, cont_x)
-    # number of contaminated samples
-    num_conts = len(cont_x)
-    # generate html string
-    html_output = generate_html(general_hmap, cont_hmap, cont_table,
+    try:
+        hmap, data, x, y = cu.get_heatmap_data(ans)
+        general_hmap = cu.generate_heatmap(data, x, y)
+        # generate heatmap matrix of only samples suspected of contamination
+        cont_data, cont_x, cont_y = cu.get_contaminated_data(data, hmap)
+        cont_hmap = cu.generate_heatmap(cont_data, cont_x, cont_y)
+        # table of barcode read counts for contaminated samples only
+        cont_table = cu.generate_table(ans, cont_x)
+        # number of contaminated samples
+        num_conts = len(cont_x)
+        # generate html string
+        html_output = cu.generate_html(general_hmap, cont_hmap, cont_table,
                                 num_samples, num_conts, out_pth)
+    except:
+        is_error = True
+        error_msg = f'No viable barcodes were found. Please check data in {out_pth}'
+        html_output = cu.generate_html(None, None, None,
+                                    None, None, error_msg, is_error=True)
     # save report to file
-    save_html(html_output, out_pth)
+    cu.save_html(html_output, out_pth)
 #     # grab data from each sample
 #     ans = load_all_data(input_pths)
 #     # generate paired reads

@@ -12,7 +12,19 @@ from jinja2 import Environment, FileSystemLoader  # html template engine
 
 
 
-def generate_html(general_hmap, cont_hmap, cont_table, num_samples, num_conts, expt_name):
+def generate_html(general_hmap, cont_hmap, cont_table, num_samples, num_conts, expt_name, is_error=False):
+    if is_error:
+        # dir containing our template
+        file_loader = FileSystemLoader('templates')
+        # load the environment
+        env = Environment(loader=file_loader)
+        # load the template
+        template = env.get_template('contamination.html')
+        # render data in our template format
+        html_output = template.render(general_hmap=general_hmap, cont_hmap=cont_hmap, 
+                                    cont_table=cont_table, num_samples=num_samples,
+                                    num_conts=num_conts, expt_name=expt_name)
+        return html_output
     # express plots in html and JS
     general_hmap = plotly.offline.plot(general_hmap, include_plotlyjs=False, output_type='div')
     cont_hmap = plotly.offline.plot(cont_hmap, include_plotlyjs=False, output_type='div')
