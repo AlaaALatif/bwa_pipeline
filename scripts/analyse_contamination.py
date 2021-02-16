@@ -33,7 +33,7 @@ if __name__ == "__main__":
                                 num_samples, num_conts, out_pth)
     except:
         is_error = True
-        error_msg = f'No viable barcodes were found. Please check data in {out_pth}'
+        error_msg = f'No viable barcodes were found. Please check data in {out_pth.parent}'
         html_output = cu.generate_html(None, None, None,
                                     None, None, error_msg, is_error=True)
     # save report to file
