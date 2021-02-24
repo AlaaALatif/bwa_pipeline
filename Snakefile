@@ -9,6 +9,8 @@ import re
 
 configfile: "config.json"
 
+workdir: "/home/al/code/pangolin"
+
 illumina_reference = config["illumina"]["reference"]
 ref_fasta = config["ref_fasta"]
 gff = config["gff3_file"]
@@ -63,13 +65,14 @@ rule all:
         expand("{out_dir}/consensus_sequences/{seq_tech}/{sample}.fa", out_dir = out_dir, sample = df_grp["sample_library"], seq_tech = df_grp.index.get_level_values(1).unique()),
         "{out_dir}/trimmed_bams/illumina/reports/coverage_report.tsv".format(out_dir = out_dir),
         "{out_dir}/merged_aligned_bams/illumina/reports/mapped_unmapped_report.tsv".format(out_dir = out_dir),
-        "{out_dir}/barcode_counts/illumina/contamination_report.html".format(out_dir = out_dir)
+        "{out_dir}/barcode_counts/illumina/contamination_report.html".format(out_dir = out_dir),
+        "{out_dir}/msa/lineage_report_{current_date}.csv".format(out_dir = out_dir, current_date = current_date_str)
 
 rule align_consensus_genomes:
     input:
         "{out_dir}/trimmed_bams/illumina/reports/coverage_report.tsv"
     output:
-        temp("{out_dir}/msa/{current_date}.fa"),
+        "{out_dir}/msa/{current_date}.fa",
         "{out_dir}/msa/{current_date}_msa.fa"
     threads: 4
     shell:
@@ -316,6 +319,23 @@ rule analyse_contamination:
         "{out_dir}/barcode_counts/illumina/contamination_report.html"
     script: 
         "scripts/analyse_contamination.py"
+
+# create tmp file containing filenames for samples 
+# use process substitution
+rule call_lineages:
+    input: 
+        "{out_dir}/msa/{current_date}.fa"
+    output: 
+        "{out_dir}/msa/lineage_report_{current_date}.csv"
+    params:
+        setup="/home/al/code/pangolin/setup.py"
+    conda:
+        "/home/al/code/pangolin/environment.yml"
+    shell: 
+        """
+        python {params.setup} install
+        pangolin {input} --outfile {output}
+        """
         
 # Rules for checking iVar and samtools versions running inside snakemake pipeline
 # rule check_samtools_version:
