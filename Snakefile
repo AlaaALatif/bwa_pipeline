@@ -324,17 +324,17 @@ rule analyse_contamination:
         "scripts/analyse_contamination.py"
 
 
-rule call_lineages:
-    input:
-        "{out_dir}/msa/{current_date}.fa"
-    output: 
-        "{out_dir}/msa/lineage_report_{current_date}.csv"
-    # conda:
-    #     "/home/al/code/pangolin/environment.yml"
-    shell: 
-        """
-        pangolin {input} --outfile {output}
-        """
+# rule call_lineages:
+#     input:
+#         "{out_dir}/msa/{current_date}.fa"
+#     output: 
+#         "{out_dir}/msa/lineage_report_{current_date}.csv"
+#     # conda:
+#     #     "/home/al/code/pangolin/environment.yml"
+#     shell: 
+#         """
+#         pangolin {input} --outfile {output}
+#         """
 
 
 # rule plot_depths:
