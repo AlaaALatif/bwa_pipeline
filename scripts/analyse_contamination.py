@@ -12,13 +12,13 @@ if __name__ == "__main__":
     input_pths = [Path(p) for p in snakemake.input]
     # print(input_pths)
     num_samples = len(input_pths)
-    # grab data from each sample
-    ans = cu.load_all_data(input_pths)
-    # generate paired reads
-    ans['paired_read'] = ans.apply(lambda x: x['forward_barcode'] + '-' + x['reverse_barcode'], axis=1)
-    # compute log of read counts 
-    ans['log_count'] = ans['paired_read_count'].apply(lambda x: np.log(x+1))
     try:
+        # grab data from each sample
+        ans = cu.load_all_data(input_pths)
+        # generate paired reads
+        ans['paired_read'] = ans.apply(lambda x: x['forward_barcode'] + '-' + x['reverse_barcode'], axis=1)
+        # compute log of read counts 
+        ans['log_count'] = ans['paired_read_count'].apply(lambda x: np.log(x+1))
         hmap, data, x, y = cu.get_heatmap_data(ans)
         general_hmap = cu.generate_heatmap(data, x, y)
         # generate heatmap matrix of only samples suspected of contamination

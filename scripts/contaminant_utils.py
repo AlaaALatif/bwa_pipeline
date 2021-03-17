@@ -1,3 +1,5 @@
+import sys
+# sys.path.append('../')
 import re  # regex
 import numpy as np  # linear algebra
 import pandas as pd  # data processing
@@ -31,7 +33,7 @@ def generate_html(general_hmap, cont_hmap, cont_table, num_samples, num_conts, e
     # express contaminants table in html
     cont_table = cont_table.to_html()
     # dir containing our template
-    file_loader = FileSystemLoader('templates')
+    file_loader = FileSystemLoader('/home/al/code/bwa_pipeline/templates')
     # load the environment
     env = Environment(loader=file_loader)
     # load the template
