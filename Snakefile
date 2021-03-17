@@ -9,7 +9,7 @@ import re
 
 configfile: "config.json"
 
-workdir: "/home/al/code/pangolin"
+
 
 illumina_reference = config["illumina"]["reference"]
 ref_fasta = config["ref_fasta"]
@@ -25,6 +25,8 @@ df_grp = df.groupby(["sample", "sequencing_tech"]).apply(lambda x: x.sum()) #.su
 lib_delim = config["library_delimiter"]
 
 df_grp["sample_library"] = df_grp["sample_library"].apply(lambda x: x.split(lib_delim)[0] +"_" + "_".join(re.findall("L[0-9]{3}", x)))
+
+# workdir: "/home/al/code/pangolin"
 
 # Illumina functions
 def get_bams(wildcards):
@@ -58,6 +60,7 @@ current_date_str = datetime.now().strftime("%Y-%m-%d")
 
 rule all:
     input:
+        "{out_dir}/msa/lineage_report_{current_date}.csv".format(current_date = current_date_str, out_dir = out_dir),
         "{out_dir}/msa/{current_date}_msa.fa".format(current_date = current_date_str, out_dir = out_dir),
         expand("{out_dir}/variants/{seq_tech}/{sample}.tsv", out_dir = out_dir, sample = df_grp["sample_library"], seq_tech = df_grp.index.get_level_values(1).unique()),
         expand("{out_dir}/depth/{seq_tech}/{sample}.depth", out_dir = out_dir, sample = df_grp["sample_library"], seq_tech = df_grp.index.get_level_values(1).unique()),
@@ -66,7 +69,7 @@ rule all:
         "{out_dir}/trimmed_bams/illumina/reports/coverage_report.tsv".format(out_dir = out_dir),
         "{out_dir}/merged_aligned_bams/illumina/reports/mapped_unmapped_report.tsv".format(out_dir = out_dir),
         "{out_dir}/barcode_counts/illumina/contamination_report.html".format(out_dir = out_dir),
-        "{out_dir}/msa/lineage_report_{current_date}.csv".format(out_dir = out_dir, current_date = current_date_str)
+        # "{out_dir}/msa/lineage_report_{current_date}.csv".format(out_dir = out_dir, current_date = current_date_str)
 
 rule align_consensus_genomes:
     input:
@@ -74,7 +77,7 @@ rule align_consensus_genomes:
     output:
         "{out_dir}/msa/{current_date}.fa",
         "{out_dir}/msa/{current_date}_msa.fa"
-    threads: 4
+    threads: 25
     shell:
         """
         cat $(awk '$2 >= 70 && $1!="SAMPLE"' {input} | cut -f 1 | cut -f 1 -d . | sed 's|^|{out_dir}/consensus_sequences/illumina/|g' | sed 's/$/.fa/g') > {output[0]}
@@ -146,7 +149,7 @@ rule trim_reads_illumina:
         ivar trim -e -i {input} -b {params.bed} -p {output.tmpbam} > {log}  # Add -e if nextera used
         samtools sort -T {wildcards.sample}.trim -o {output.bam} {output.tmpbam}
         samtools index {output.bam}
-	/home/gk/code/hCoV19/compute_coverage.sh {output.bam} > {output.cov_stats}
+	/home/al/code/bwa_pipeline/scripts/compute_coverage.sh {output.bam} > {output.cov_stats}
 	samtools stats {output.bam} > {output.bam_stats}
         """
 
@@ -168,8 +171,8 @@ rule demultiplex_barcodes:
     output:
         "{out_dir}/barcode_counts/illumina/{sample}.tsv"
     params:
-        forward_barcode_ref="/home/gk/code/hCoV19/db/barcodes/forward_barcodes_combined.fa",
-        reverse_barcode_ref="/home/gk/code/hCoV19/db/barcodes/reverse_barcodes_combined.fa",
+        forward_barcode_ref="/home/al/data/hcov19/barcodes/forward_barcodes_combined.fa",
+        reverse_barcode_ref="/home/al/data/hcov19/barcodes/reverse_barcodes_combined.fa",
         barcode_dir="{out_dir}/demultiplexed_barcodes/illumina/{sample}"
     log: "{out_dir}/logs/demultiplex_barcodes/{sample}.log"
     shell:
@@ -192,7 +195,7 @@ rule extract_barcode_reads:
         tmpbam_name=temp("{out_dir}/demultiplexed_barcodes/illumina/{sample}_barcode.name.bam"),
         depth="{out_dir}/merged_fastq/illumina/depth/{sample}_barcode.depth"
     params:
-        insert_reference="/home/gk/code/hCoV19/db/zeamays"
+        insert_reference="/home/al/data/hcov19/zeamays/zeamays"
     shell:
         """
         bwa mem {params.insert_reference} {input.forward} {input.reverse} | samtools view -F 4 -b > {output.tmpbam}
@@ -320,22 +323,34 @@ rule analyse_contamination:
     script: 
         "scripts/analyse_contamination.py"
 
-# create tmp file containing filenames for samples 
-# use process substitution
+
 rule call_lineages:
-    input: 
+    input:
         "{out_dir}/msa/{current_date}.fa"
     output: 
         "{out_dir}/msa/lineage_report_{current_date}.csv"
-    params:
-        setup="/home/al/code/pangolin/setup.py"
-    conda:
-        "/home/al/code/pangolin/environment.yml"
+    # conda:
+    #     "/home/al/code/pangolin/environment.yml"
     shell: 
         """
-        python {params.setup} install
         pangolin {input} --outfile {output}
         """
+
+
+# rule plot_depths:
+#     input:
+#         expand("{out_dir}/depth/illumina/{sample}.depth", out_dir = out_dir, sample = df_grp["sample_library"])
+#     output: 
+#         "{out_dir}/msa/lineage_report_{current_date}.csv"
+#     params:
+#         setup="/home/al/code/pangolin/setup.py"
+#     conda:
+#         "/home/al/code/pangolin/environment.yml"
+#     shell: 
+#         """
+#         python {params.setup} install
+#         pangolin {input} --outfile {output}
+#         """
         
 # Rules for checking iVar and samtools versions running inside snakemake pipeline
 # rule check_samtools_version:
