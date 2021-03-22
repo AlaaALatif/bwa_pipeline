@@ -236,7 +236,7 @@ rule align_reads_illumina:
     params:
         ref= "{ref}".format(ref = illumina_reference),
         tmp="{out_dir}/aligned_bams/illumina/{sample}.sorted.tmp.bam"
-    threads: 1
+    threads: 15
     shell:
         """
         bwa mem -t {threads} {params.ref} {input[0]} {input[1]} | samtools view -Sb | samtools sort -T {wildcards.sample}.align -o {params.tmp}
@@ -324,17 +324,17 @@ rule analyse_contamination:
         "scripts/analyse_contamination.py"
 
 
-# rule call_lineages:
-#     input:
-#         "{out_dir}/msa/{current_date}.fa"
-#     output: 
-#         "{out_dir}/msa/lineage_report_{current_date}.csv"
-#     # conda:
-#     #     "/home/al/code/pangolin/environment.yml"
-#     shell: 
-#         """
-#         pangolin {input} --outfile {output}
-#         """
+rule call_lineages:
+    input:
+        "{out_dir}/msa/{current_date}.fa"
+    log:
+        "{out_dir}/msa/logs/lineage_log_{current_date}.txt"
+    output: 
+        "{out_dir}/msa/lineage_report_{current_date}.csv"
+    shell: 
+        """
+        bash /home/al/code/bwa_pipeline/scripts/call_lineages.sh {input} {output} {log}
+        """
 
 
 # rule plot_depths:
