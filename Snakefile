@@ -60,6 +60,7 @@ current_date_str = datetime.now().strftime("%Y-%m-%d")
 
 rule all:
     input:
+        # "{out_dir}/{current_date}_analysis_report.tar".format(current_date = current_date_str, out_dir = out_dir),
         "{out_dir}/msa/lineage_report_{current_date}.csv".format(current_date = current_date_str, out_dir = out_dir),
         "{out_dir}/msa/{current_date}_msa.fa".format(current_date = current_date_str, out_dir = out_dir),
         expand("{out_dir}/variants/{seq_tech}/{sample}.tsv", out_dir = out_dir, sample = df_grp["sample_library"], seq_tech = df_grp.index.get_level_values(1).unique()),
@@ -70,6 +71,31 @@ rule all:
         "{out_dir}/merged_aligned_bams/illumina/reports/mapped_unmapped_report.tsv".format(out_dir = out_dir),
         "{out_dir}/barcode_counts/illumina/contamination_report.html".format(out_dir = out_dir),
         # "{out_dir}/msa/lineage_report_{current_date}.csv".format(out_dir = out_dir, current_date = current_date_str)
+
+
+# create tmp file containing filenames for samples 
+# use process substitution
+rule analyse_contamination:
+    input: 
+        expand("{out_dir}/barcode_counts/illumina/{sample}.tsv", out_dir = out_dir, sample = df_grp["sample_library"])
+    output: 
+        "{out_dir}/barcode_counts/illumina/contamination_report.html"
+    script: 
+        "scripts/analyse_contamination.py"
+
+
+rule call_lineages:
+    input:
+        "{out_dir}/msa/{current_date}.fa"
+    log:
+        "{out_dir}/msa/logs/lineage_log_{current_date}.txt"
+    output: 
+        "{out_dir}/msa/lineage_report_{current_date}.csv"
+    shell: 
+        """
+        bash /home/al/code/bwa_pipeline/scripts/call_lineages.sh {input} {output} {log}
+        """
+
 
 rule align_consensus_genomes:
     input:
@@ -94,6 +120,7 @@ rule call_depth_illumina:
         samtools depth -d 0 -Q 0 -q 0 -aa {input} > {output}
         """
 
+# variant calling, reference supplied to mpileup
 rule call_variants_illumina:
     input:
         "{out_dir}/trimmed_bams/illumina/{sample}.trimmed.sorted.bam"
@@ -107,6 +134,7 @@ rule call_variants_illumina:
         samtools mpileup -A -aa -d 0 -Q 0 --reference {params.ref} {input} | ivar variants -r {params.ref}  -g {params.gff} -p {output} -m 10
         """
 
+# consensus calling, reference not supplied to mpileup
 rule call_consensus_illumina:
     input:
         "{out_dir}/trimmed_bams/illumina/{sample}.trimmed.sorted.bam"
@@ -183,6 +211,7 @@ rule demultiplex_barcodes:
         find {params.barcode_dir} -name "*.fastq.gz" | sort | xargs -n 2 bash -c 'n1=$(basename $0 | sed "s/.1.fastq.gz//g" | sed "s/-/\\t/g");echo -e "${{n1}}\t"$(($(zcat $0 | wc -l)/4))' | sort -k 1 >> {output}
         """
 
+# internal barcode counting step to account for inter-sample contamination
 rule extract_barcode_reads:
     input:
         forward="{out_dir}/merged_fastq/illumina/{sample}_R1.fastq.gz",
@@ -222,7 +251,7 @@ rule merge_multiple_libraries_illumina:
         """
         samtools merge {output.tmp} {input.bams}
         samtools sort -T {wildcards.sample}.merge -o {output.tmpbam} {output.tmp}
-	samtools stats {output.tmpbam} > {output.stats}
+	    samtools stats {output.tmpbam} > {output.stats}
         samtools view -b -F 4 {output.tmpbam} > {output.bam}
         cat {input.forward} > {output.forward_merged_fastq}
         cat {input.reverse} > {output.reverse_merged_fastq}
@@ -236,7 +265,7 @@ rule align_reads_illumina:
     params:
         ref= "{ref}".format(ref = illumina_reference),
         tmp="{out_dir}/aligned_bams/illumina/{sample}.sorted.tmp.bam"
-    threads: 15
+    threads: 1
     shell:
         """
         bwa mem -t {threads} {params.ref} {input[0]} {input[1]} | samtools view -Sb | samtools sort -T {wildcards.sample}.align -o {params.tmp}
@@ -313,28 +342,21 @@ rule align_reads_ont:
         rm {params.tmp}
         """
 
-# create tmp file containing filenames for samples 
-# use process substitution
-rule analyse_contamination:
-    input: 
-        expand("{out_dir}/barcode_counts/illumina/{sample}.tsv", out_dir = out_dir, sample = df_grp["sample_library"])
-    output: 
-        "{out_dir}/barcode_counts/illumina/contamination_report.html"
-    script: 
-        "scripts/analyse_contamination.py"
 
 
-rule call_lineages:
-    input:
-        "{out_dir}/msa/{current_date}.fa"
-    log:
-        "{out_dir}/msa/logs/lineage_log_{current_date}.txt"
-    output: 
-        "{out_dir}/msa/lineage_report_{current_date}.csv"
-    shell: 
-        """
-        bash /home/al/code/bwa_pipeline/scripts/call_lineages.sh {input} {output} {log}
-        """
+# rule analysis_report:
+#     input:
+#         "{out_dir}/msa/lineage_report_{current_date}.csv"
+#     params:
+#         out_dir=out_dir
+#     output:
+#         "{out_dir}/{current_date}_analysis_report.tar",
+#         "{out_dir}/{current_date}_analysis_report.tar"
+#     shell:
+#         """
+#         find {params.out_dir}/ -name "*report*" -type f -exec tar rf {output[0]} {} \;
+#         tar rf {output[1]} msa/*
+#         """
 
 
 # rule plot_depths:
