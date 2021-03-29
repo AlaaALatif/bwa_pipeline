@@ -60,7 +60,7 @@ current_date_str = datetime.now().strftime("%Y-%m-%d")
 
 rule all:
     input:
-        # "{out_dir}/{current_date}_analysis_report.tar".format(current_date = current_date_str, out_dir = out_dir),
+        "{out_dir}/{current_date}_analysis_report.tar".format(current_date = current_date_str, out_dir = out_dir),
         "{out_dir}/msa/lineage_report_{current_date}.csv".format(current_date = current_date_str, out_dir = out_dir),
         "{out_dir}/msa/{current_date}_msa.fa".format(current_date = current_date_str, out_dir = out_dir),
         expand("{out_dir}/variants/{seq_tech}/{sample}.tsv", out_dir = out_dir, sample = df_grp["sample_library"], seq_tech = df_grp.index.get_level_values(1).unique()),
@@ -75,13 +75,15 @@ rule all:
 
 # create tmp file containing filenames for samples 
 # use process substitution
-rule analyse_contamination:
+rule generate_summary_report:
     input: 
-        expand("{out_dir}/barcode_counts/illumina/{sample}.tsv", out_dir = out_dir, sample = df_grp["sample_library"])
+        "{out_dir}/msa/lineage_report_{current_date}.csv"
+    params:
+        report_name="{current_date}_analysis_report.tar"
     output: 
-        "{out_dir}/barcode_counts/illumina/contamination_report.html"
-    script: 
-        "scripts/analyse_contamination.py"
+        "{out_dir}/{current_date}_analysis_report.tar"
+    shell: 
+        "bash scripts/generate_summary_report.sh {out_dir} {params.report_name}"
 
 
 rule call_lineages:
@@ -95,6 +97,17 @@ rule call_lineages:
         """
         bash /home/al/code/bwa_pipeline/scripts/call_lineages.sh {input} {output} {log}
         """
+
+
+# create tmp file containing filenames for samples 
+# use process substitution
+rule analyse_contamination:
+    input: 
+        expand("{out_dir}/barcode_counts/illumina/{sample}.tsv", out_dir = out_dir, sample = df_grp["sample_library"])
+    output: 
+        "{out_dir}/barcode_counts/illumina/contamination_report.html"
+    script: 
+        "scripts/analyse_contamination.py"
 
 
 rule align_consensus_genomes:
