@@ -6,6 +6,7 @@ quality=$3
 cpus=$4
 
 cd $outdir/
+mkdir all_fastqs
 mkdir lane_1_tmp
 mkdir lane_2_tmp
 mkdir barcodes_1
@@ -38,7 +39,7 @@ java -Xms20G -Xmx60G -jar /home/al/code/picard/picard.jar IlluminaBasecallsToFas
       MACHINE_NAME=NovaSeq \
       FLOWCELL_BARCODE=abcdeACXX
 # # lane 2 demultiplex
-# cd $outdir/lane_2_tmp
+cd $outdir/lane_2_tmp
 java -jar /home/al/code/picard/picard.jar ExtractIlluminaBarcodes \
               BASECALLS_DIR=$indir/Data/Intensities/BaseCalls \
               LANE=2 \
@@ -63,5 +64,5 @@ java -Xms20G -Xmx60G -jar /home/al/code/picard/picard.jar IlluminaBasecallsToFas
       RUN_BARCODE=picardrun \
       MACHINE_NAME=NovaSeq \
       FLOWCELL_BARCODE=abcdeACXX
-# # rename fastq files and consolidate 
-# python /home/al/code/bwa_pipeline/scripts/rename_picard_fastq.py --out-dir $outdir
+# rename fastq files and consolidate 
+python /home/al/code/bwa_pipeline/scripts/rename_picard_fastq.py --out-dir $outdir
