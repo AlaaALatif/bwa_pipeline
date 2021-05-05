@@ -62,6 +62,7 @@ rule all:
     input:
         "{out_dir}/{current_date}_analysis_report.tar".format(current_date = current_date_str, out_dir = out_dir),
         "{out_dir}/msa/lineage_report_{current_date}.csv".format(current_date = current_date_str, out_dir = out_dir),
+        "{out_dir}/qc_report.csv".format(out_dir = out_dir),
         "{out_dir}/msa/{current_date}_msa.fa".format(current_date = current_date_str, out_dir = out_dir),
         expand("{out_dir}/variants/{seq_tech}/{sample}.tsv", out_dir = out_dir, sample = df_grp["sample_library"], seq_tech = df_grp.index.get_level_values(1).unique()),
         expand("{out_dir}/depth/{seq_tech}/{sample}.depth", out_dir = out_dir, sample = df_grp["sample_library"], seq_tech = df_grp.index.get_level_values(1).unique()),
@@ -77,7 +78,8 @@ rule all:
 # use process substitution
 rule generate_summary_report:
     input: 
-        "{out_dir}/msa/lineage_report_{current_date}.csv"
+        "{out_dir}/msa/lineage_report_{current_date}.csv",
+        "{out_dir}/qc_report.csv"
     params:
         report_name="{current_date}_analysis_report.tar"
     output: 
@@ -96,6 +98,20 @@ rule call_lineages:
     shell: 
         """
         bash /home/al/code/bwa_pipeline/scripts/call_lineages.sh {input} {output} {log}
+        """
+
+
+
+rule generate_qc_report:
+    input:
+        "{out_dir}/trimmed_bams/illumina/reports/coverage_report.tsv",
+        "{out_dir}/merged_aligned_bams/illumina/reports/mapped_unmapped_report.tsv",
+        expand("{out_dir}/logs/trimmed/{sample}.log", out_dir = out_dir, sample = df_grp["sample_library"])
+    output:
+        "{out_dir}/qc_report.csv"
+    shell:
+        """
+        python scripts/generate_qc_report.py --input {out_dir} --out-fp {output}
         """
 
 
@@ -182,12 +198,12 @@ rule trim_reads_illumina:
         tmpbam=temp("{out_dir}/trimmed_bams/illumina/{sample}.trimmed.bam")
     params:
         bed="{bed}".format(bed = bed_file),
-        primer_pairs="{primer_pairs}".format(primer_pairs=primer_pairs),
+        primer_pairs="{primer_pairs}".format(primer_pairs = primer_pairs),
 	plots="{out_dir}/trimmed_bams/illumina/plots/{sample}"
     log: "{out_dir}/logs/trimmed/{sample}.log"
     shell:
         """
-        ivar trim -e -i {input} -b {params.bed} -p {output.tmpbam} > {log}  # Add -e if nextera used
+        ivar trim -e -f {params.primer_pairs} -i {input} -b {params.bed} -p {output.tmpbam} > {log}  # Add -e if nextera used
         samtools sort -T {wildcards.sample}.trim -o {output.bam} {output.tmpbam}
         samtools index {output.bam}
 	/home/al/code/bwa_pipeline/scripts/compute_coverage.sh {output.bam} > {output.cov_stats}
